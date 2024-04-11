@@ -140,10 +140,12 @@ func main() {
 	c := client.New("localhost:5001")
 	for i := 0; i < 10; i++ {
 
+		//sets a key and value
 		if err := c.Set(context.Background(), fmt.Sprintf("foo_%d", i), fmt.Sprintf("bar_%d", i)); err != nil {
 			log.Fatal(err)
 		}
 		time.Sleep(time.Second)
+		//gets the value for the key
 		val, err := c.Get(context.Background(), fmt.Sprintf("foo_%d", i))
 		if err != nil {
 			log.Fatal(err)
