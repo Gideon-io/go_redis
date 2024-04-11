@@ -68,6 +68,7 @@ func (s *Server) Start() error {
 
 }
 
+// handleMessage parses the message and executes the command
 func (s *Server) handleMessage(msg Message) error {
 	cmd, err := parseCommand(string(msg.data))
 	if err != nil {

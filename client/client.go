@@ -16,6 +16,7 @@ func New(addr string) *Client {
 	return &Client{addr: addr}
 }
 
+// Set sets a key in the key-value store
 func (c *Client) Set(ctx context.Context, key string, val string) error {
 
 	conn, err := net.Dial("tcp", c.addr)
@@ -36,6 +37,7 @@ func (c *Client) Set(ctx context.Context, key string, val string) error {
 	return err
 }
 
+// Get gets a key from the key-value store
 func (c *Client) Get(ctx context.Context, key string) (string, error) {
 
 	conn, err := net.Dial("tcp", c.addr)
