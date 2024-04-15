@@ -1,26 +1,27 @@
-package main
+package peer
 
 import (
+	"go_redis/server"
 	"net"
 )
 
 type Peer struct {
 	conn  net.Conn
-	msgCh chan Message
+	msgCh chan server.Message
 }
 
 func (p *Peer) Send(msg []byte) (int, error) {
 	return p.conn.Write(msg)
 }
 
-func NewPeer(conn net.Conn, msgCh chan Message) *Peer {
+func NewPeer(conn net.Conn, msgCh chan server.Message) *Peer {
 	return &Peer{
 		conn:  conn,
 		msgCh: msgCh,
 	}
 }
 
-func (p *Peer) readLoop() error {
+func (p *Peer) ReadLoop() error {
 	buf := make([]byte, 1024)
 	for {
 		n, err := p.conn.Read(buf)
@@ -29,9 +30,9 @@ func (p *Peer) readLoop() error {
 		}
 		msgBuf := make([]byte, n)
 		copy(msgBuf, buf[:n])
-		p.msgCh <- Message{
-			data: msgBuf,
-			peer: p,
+		p.msgCh <- server.Message{
+			Data: msgBuf,
+			Peer: p,
 		}
 	}
 }

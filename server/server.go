@@ -1,71 +1,20 @@
-package main
+package server
 
 import (
-	"context"
 	"fmt"
-	"log"
-	"time"
-
-	"go_redis/client"
-	"go_redis/server"
+	"go_redis/pkg/keyval"
+	"go_redis/pkg/peer"
+	"go_redis/pkg/proto"
+	"log/slog"
+	"net"
 )
-
-func main() {
-	//create a new server
-	server := server.NewServer(server.Config{})
-	//start the server
-	go func() {
-		log.Fatal(server.Start())
-	}()
-	//sleep so the server has time to start
-	time.Sleep(time.Second)
-
-	//create a new client
-	c := client.New("localhost:5001")
-	for i := 0; i < 10; i++ {
-		//sets a key and value
-		if err := c.Set(context.Background(), fmt.Sprintf("foo_%d", i), fmt.Sprintf("bar_%d", i)); err != nil {
-			log.Fatal(err)
-		}
-		time.Sleep(time.Second)
-		//gets the value for the key
-		val, err := c.Get(context.Background(), fmt.Sprintf("foo_%d", i))
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("Got this back =>", val)
-	}
-}
-
-/* Old code for reference
-
-const defaultListenAddr = ":5001"
-
-type Config struct {
-	ListenAddr string
-}
-
-type Message struct {
-	data []byte
-	peer *peer.Peer
-}
-
-type Server struct {
-	Config
-	peers     map[*peer.Peer]bool
-	ln        net.Listener
-	addPeerCh chan *peer.Peer
-	quitCh    chan struct{}
-	msgCh     chan Message
-	//
-	kv *keyval.KV
-}
 
 // create a new server with the given configuration
 func NewServer(cfg Config) *Server {
 	//if no listen address is provided, use the default
 	if len(cfg.ListenAddr) == 0 {
-		cfg.ListenAddr = defaultListenAddr
+		//cfg.ListenAddr = defaultListenAddr
+		cfg.ListenAddr = ":5001"
 	}
 	//return a new server instance
 	return &Server{
@@ -73,7 +22,7 @@ func NewServer(cfg Config) *Server {
 		peers:     make(map[*peer.Peer]bool),
 		addPeerCh: make(chan *peer.Peer),
 		quitCh:    make(chan struct{}),
-		msgCh:     make(chan Message),
+		MsgCh:     make(chan Message),
 		kv:        keyval.NewKeyVal(),
 	}
 }
@@ -98,7 +47,7 @@ func (s *Server) Start() error {
 
 // handleMessage parses the message and executes the command
 func (s *Server) handleMessage(msg Message) error {
-	cmd, err := proto.ParseCommand(string(msg.data))
+	cmd, err := proto.ParseCommand(string(msg.Data))
 	if err != nil {
 		return err
 
@@ -111,7 +60,7 @@ func (s *Server) handleMessage(msg Message) error {
 		if !ok {
 			return fmt.Errorf("key not found: %s", v.Key)
 		}
-		_, err := msg.peer.Send(val)
+		_, err := msg.Peer.Send(val)
 		if err != nil {
 			slog.Error("peer send error", "err", err)
 		}
@@ -123,7 +72,7 @@ func (s *Server) handleMessage(msg Message) error {
 func (s *Server) loop() {
 	for {
 		select {
-		case msg := <-s.msgCh:
+		case msg := <-s.MsgCh:
 			if err := s.handleMessage(msg); err != nil {
 				slog.Error("raw message error", "err", err)
 			}
@@ -149,40 +98,9 @@ func (s *Server) acceptLoop() error {
 
 // handleConn creates a new peer and adds it to the server
 func (s *Server) handleConn(conn net.Conn) {
-	peer := peer.NewPeer(conn, s.msgCh)
+	peer := peer.NewPeer(conn, s.MsgCh)
 	s.addPeerCh <- peer
 	if err := peer.ReadLoop(); err != nil {
 		slog.Error("read error", "err", err, "remoteAddr", conn.RemoteAddr())
 	}
 }
-
-func main() {
-	server := NewServer(Config{})
-	go func() {
-
-		log.Fatal(server.Start())
-	}()
-	//sleep so the server has time to start
-	time.Sleep(time.Second)
-
-	c := client.New("localhost:5001")
-	for i := 0; i < 10; i++ {
-
-		//sets a key and value
-		if err := c.Set(context.Background(), fmt.Sprintf("foo_%d", i), fmt.Sprintf("bar_%d", i)); err != nil {
-			log.Fatal(err)
-		}
-		time.Sleep(time.Second)
-		//gets the value for the key
-		val, err := c.Get(context.Background(), fmt.Sprintf("foo_%d", i))
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fmt.Println("Got this back =>", val)
-
-	}
-
-}
-
-*/

@@ -1,4 +1,4 @@
-package main
+package proto
 
 import (
 	"bytes"
@@ -19,15 +19,15 @@ type Command interface {
 }
 
 type SetCommand struct {
-	key, val []byte
+	Key, Val []byte
 }
 
 type GetCommand struct {
-	key []byte
+	Key []byte
 }
 
 // parseCommand parses a RESP command
-func parseCommand(raw string) (Command, error) {
+func ParseCommand(raw string) (Command, error) {
 	rd := resp.NewReader(bytes.NewBufferString(raw))
 
 	for {
@@ -47,7 +47,7 @@ func parseCommand(raw string) (Command, error) {
 						return nil, fmt.Errorf("invalid number of variables for GET command")
 					}
 					cmd := GetCommand{
-						key: v.Array()[1].Bytes(),
+						Key: v.Array()[1].Bytes(),
 					}
 					return cmd, nil
 
@@ -57,8 +57,8 @@ func parseCommand(raw string) (Command, error) {
 						return nil, fmt.Errorf("invalid number of variables for SET command")
 					}
 					cmd := SetCommand{
-						key: v.Array()[1].Bytes(),
-						val: v.Array()[2].Bytes(),
+						Key: v.Array()[1].Bytes(),
+						Val: v.Array()[2].Bytes(),
 					}
 					return cmd, nil
 				}
