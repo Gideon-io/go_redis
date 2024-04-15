@@ -1,7 +1,7 @@
 package peer
 
 import (
-	"go_redis/server"
+	"go_redis/pkg/server"
 	"net"
 )
 

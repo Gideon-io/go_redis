@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"go_redis/client"
-	"go_redis/server"
+	"go_redis/pkg/server"
 )
 
 func main() {
