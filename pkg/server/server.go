@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 	"go_redis/pkg/keyval"
-	"go_redis/pkg/peer"
 	"go_redis/pkg/proto"
 	"log/slog"
 	"net"
@@ -19,8 +18,8 @@ func NewServer(cfg Config) *Server {
 	//return a new server instance
 	return &Server{
 		Config:    cfg,
-		peers:     make(map[*peer.Peer]bool),
-		addPeerCh: make(chan *peer.Peer),
+		peers:     make(map[*Peer]bool),
+		addPeerCh: make(chan *Peer),
 		quitCh:    make(chan struct{}),
 		MsgCh:     make(chan Message),
 		kv:        keyval.NewKeyVal(),
@@ -98,7 +97,7 @@ func (s *Server) acceptLoop() error {
 
 // handleConn creates a new peer and adds it to the server
 func (s *Server) handleConn(conn net.Conn) {
-	peer := peer.NewPeer(conn, s.MsgCh)
+	peer := NewPeer(conn, s.MsgCh)
 	s.addPeerCh <- peer
 	if err := peer.ReadLoop(); err != nil {
 		slog.Error("read error", "err", err, "remoteAddr", conn.RemoteAddr())

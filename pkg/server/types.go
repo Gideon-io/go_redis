@@ -2,7 +2,6 @@ package server
 
 import (
 	"go_redis/pkg/keyval"
-	"go_redis/pkg/peer"
 	"net"
 )
 
@@ -12,14 +11,14 @@ type Config struct {
 
 type Message struct {
 	Data []byte
-	Peer *peer.Peer
+	Peer *Peer
 }
 
 type Server struct {
 	Config
-	peers     map[*peer.Peer]bool
+	peers     map[*Peer]bool
 	ln        net.Listener
-	addPeerCh chan *peer.Peer
+	addPeerCh chan *Peer
 	quitCh    chan struct{}
 	MsgCh     chan Message
 	//
