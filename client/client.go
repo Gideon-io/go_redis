@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fzzy/radix/redis/resp"
+	"go_redis/pkg/resp"
 )
 
 const (
@@ -166,7 +166,8 @@ func (c *Client) writeRequest(requests ...*request) error {
 }
 
 func (c *Client) parse() *Reply {
-	m, err := resp.ReadMessage(c.reader)
+	rd := resp.NewReader(c.reader)
+	m, _, err := rd.ReadValue()
 	if err != nil {
 		if t, ok := err.(*net.OpError); !ok || !t.Timeout() {
 			// close connection except timeout
@@ -174,7 +175,7 @@ func (c *Client) parse() *Reply {
 		}
 		return &Reply{Type: ErrorReply, Err: err}
 	}
-	r, err := messageToReply(m)
+	r, err := messageToReply(&m)
 	if err != nil {
 		return &Reply{Type: ErrorReply, Err: err}
 	}
@@ -184,63 +185,67 @@ func (c *Client) parse() *Reply {
 // The error return parameter is for bubbling up parse errors and the like, if
 // the error is sent by redis itself as an Err message type, then it will be
 // sent back as an actual Reply (wrapped in a CmdError)
-func messageToReply(m *resp.Message) (*Reply, error) {
+func messageToReply(v *resp.Value) (*Reply, error) {
 	r := &Reply{}
 
-	switch m.Type {
-	case resp.Err:
-		errMsg, err := m.Err()
-		if err != nil {
-			return nil, err
+	switch v.Typ {
+	case resp.Error:
+		errMsg := v.Error()
+		if errMsg == nil {
+			return nil, errors.New("Value is not an array or it's a RESP Null value")
 		}
 		if strings.HasPrefix(errMsg.Error(), "LOADING") {
-			err = LoadingError
+			errMsg = LoadingError
 		} else {
-			err = &CmdError{errMsg}
+			errMsg = &CmdError{errMsg}
 		}
 		r.Type = ErrorReply
-		r.Err = err
+		r.Err = errMsg
 
-	case resp.SimpleStr:
-		status, err := m.Bytes()
-		if err != nil {
-			return nil, err
+	case resp.SimpleString:
+		status := v.Bytes()
+		if status == nil {
+			return nil, errors.New("Value is a RESP Null value")
 		}
 		r.Type = StatusReply
 		r.buf = status
 
-	case resp.Int:
-		i, err := m.Int()
+	case resp.Integer:
+		i, err := v.Integer()
 		if err != nil {
 			return nil, err
 		}
 		r.Type = IntegerReply
-		r.int = i
+		r.int = int64(i) // convert to int64
 
-	case resp.BulkStr:
-		b, err := m.Bytes()
-		if err != nil {
-			return nil, err
+	case resp.BulkString:
+		b := v.Bytes()
+		if b == nil {
+			return nil, errors.New("RESP value is a null value")
 		}
 		r.Type = BulkReply
 		r.buf = b
-
-	case resp.Nil:
-		r.Type = NilReply
-
+	/*
+		case resp.Nil:
+			r.Type = NilReply
+	*/
 	case resp.Array:
-		ms, err := m.Array()
-		if err != nil {
-			return nil, err
+		ms := v.Array()
+		if ms == nil {
+			return nil, errors.New("Value is not an array or value is a RESP Null value")
 		}
 		r.Type = MultiReply
 		r.Elems = make([]*Reply, len(ms))
+
+		var err error // Not sure if this is correct
+
 		for i := range ms {
-			r.Elems[i], err = messageToReply(ms[i])
+			r.Elems[i], err = messageToReply(&ms[i])
 			if err != nil {
 				return nil, err
 			}
 		}
+
 	}
 
 	return r, nil
