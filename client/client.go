@@ -31,6 +31,7 @@ type Client struct {
 	pending   []*request
 	completed []*Reply
 	writeBuf  []byte
+	writer    *resp.Writer //created a new writer here to test a simple write
 }
 
 // request describes a client's request to the redis server
@@ -53,6 +54,7 @@ func DialTimeout(network, addr string, timeout time.Duration) (*Client, error) {
 	c.timeout = timeout
 	c.reader = bufio.NewReaderSize(conn, bufSize)
 	c.writeBuf = make([]byte, 0, 1024)
+	c.writer = resp.NewWriter(conn)
 	return c, nil
 }
 
