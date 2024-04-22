@@ -352,11 +352,27 @@ func (s *Server) handleGET(conn Conn, cmd Command) {
 	}
 }
 
+// handleDEL handles the DEL command
+func (s *Server) handleDEL(conn Conn, cmd Command) {
+	if len(cmd.Args) < 2 {
+		conn.WriteError("ERR wrong number of arguments for 'del' command")
+		return
+	}
+	key := cmd.Args[1]
+	err := s.kv.Del(key)
+	if err != nil {
+		conn.WriteError("ERR " + err.Error())
+	} else {
+		conn.WriteInt(1)
+	}
+}
+
 // Set up server command routing
 func (s *Server) SetupCommandHandlers() {
 	s.commandHandlers = map[string]func(Conn, Command){
 		"SET": s.handleSET,
 		"GET": s.handleGET,
+		"DEL": s.handleDEL,
 	}
 }
 
@@ -368,16 +384,6 @@ func (s *Server) handleCommand(conn Conn, cmd Command) {
 	}
 }
 
-/*
-func (s *Server) HandleIncomingCommand(conn Conn, cmd Command) {
-	handler, exists := s.commandHandlers[string(cmd.Args[0])]
-	if !exists {
-		conn.WriteError("ERR command not supported")
-		return
-	}
-	handler(conn, cmd)
-}
-*/
 // ListenServeAndSignal serves incoming connections and passes nil or error
 // when listening. signal can be nil.
 func (s *TLSServer) ListenServeAndSignal(signal chan error) error {

@@ -31,3 +31,11 @@ func (kv *KV) Get(key []byte) ([]byte, bool) {
 	return val, ok
 
 }
+
+// Del deletes a key from the key-value store
+func (kv *KV) Del(key []byte) error {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	delete(kv.data, string(key))
+	return nil
+}
