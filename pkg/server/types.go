@@ -3,8 +3,6 @@ package server
 import (
 	"go_redis/pkg/keyval"
 	"net"
-
-	"github.com/fzzy/radix/redis/resp"
 )
 
 type Config struct {
@@ -25,8 +23,4 @@ type Server struct {
 	MsgCh     chan Message
 	//
 	kv *keyval.KV
-}
-
-func hello() {
-	resp.AppendArbitraryAsFlattenedStrings
 }

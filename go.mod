@@ -2,7 +2,11 @@ module go_redis
 
 go 1.22.2
 
-require github.com/tidwall/resp v0.1.1
+require (
+	github.com/tidwall/btree v1.7.0
+	github.com/tidwall/match v1.1.1
+	github.com/tidwall/resp v0.1.1
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
